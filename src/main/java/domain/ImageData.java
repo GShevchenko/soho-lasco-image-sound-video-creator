@@ -3,11 +3,13 @@ package domain;
 import com.opencsv.bean.CsvBindByPosition;
 import lombok.*;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-public class ImageData {
+public class ImageData implements Serializable {
 
     private static final Integer POSITION_1024_BYTE_JPEG = 1;
     @Getter
