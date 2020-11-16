@@ -49,6 +49,10 @@ public class ImageMetadata implements IImageMetadata, Serializable {
         return beginDate;
     }
 
+    public String getJpegFileName() {
+        return beginDate.substring(0, beginDate.lastIndexOf(":")).replaceAll("-", "").replace(" ", "_").replace(":", "")+ ".jpg";
+    }
+
 
 }
 

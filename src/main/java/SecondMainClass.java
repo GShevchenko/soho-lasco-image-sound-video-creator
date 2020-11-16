@@ -149,6 +149,7 @@ public class SecondMainClass extends Application {
         }
         log.info("SecondMainClass.downloadImages. metadata contains {} image's info ", downloadingService.getMetaDataTotal());
         downloadingService.downloadImages();
+        downloadingService.createListImagesFileForFmpeg();
     }
 
     private void printLog(TextArea textArea, List<File> files) {
