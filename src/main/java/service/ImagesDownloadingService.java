@@ -7,4 +7,6 @@ public interface ImagesDownloadingService {
     void downloadImagesMetadata() throws IOException;
     int downloadImages();
     void createListImagesFileForFmpeg();
+
+    String getPathToJpegListFile();
 }

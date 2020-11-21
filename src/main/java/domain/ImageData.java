@@ -4,11 +4,13 @@ import com.opencsv.bean.CsvBindByPosition;
 import lombok.*;
 
 import java.io.Serializable;
+import java.nio.file.Path;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
+@Setter
 public class ImageData implements Serializable {
 
     private static final Integer POSITION_1024_BYTE_JPEG = 1;
@@ -45,6 +47,8 @@ public class ImageData implements Serializable {
 
     @CsvBindByPosition(position = 10)
     private String extent;
+
+    private Path jpegFilePath;
 
     public Boolean isContainImage() {
         return url512WithUrl1024AsString != null;

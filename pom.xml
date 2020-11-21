@@ -52,10 +52,13 @@
             <artifactId>commons-io</artifactId>
             <version>2.8.0</version>
         </dependency>
-
-
-
-
+        <!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.7.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 
@@ -75,7 +78,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>SecondMainClass</mainClass>
+                            <mainClass>StartGui</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -93,7 +96,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>SecondMainClass</mainClass>
+                            <mainClass>StartGui</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
