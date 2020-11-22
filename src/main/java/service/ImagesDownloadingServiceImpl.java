@@ -53,10 +53,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
     }
 
     public String getQuery() {
-        if (query == null) {
-            query = String.format(templateQuery, removeTFromDateTime(observStartDate), removeTFromDateTime(observEndDate));
-        }
-        return query;
+     return query = String.format(templateQuery, removeTFromDateTime(observStartDate), removeTFromDateTime(observEndDate));
     }
     public void downloadImagesMetadata() throws IOException {
         log.info("ImagesDownloadingServiceImpl.downloadImagesMetadata. Query is {}", getQuery());
@@ -65,12 +62,14 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         ObjectMapper objectMapper = new ObjectMapper();
 //        String text = IOUtils.toString(url.openStream(), StandardCharsets.UTF_8.name());
 //        log.info("ImagesDownloadingServiceImpl.downloadImagesMetadata. text is {}", text);
-        metaDataTotal = objectMapper.readValue(url.openStream(), MetaTotal.class);
+        metaDataTotal = objectMapper.readValue(url, MetaTotal.class);
         url.openStream().close();
     }
 
     @Override
     public int downloadImages() {
+        successfullyDownloadedImages.clear();
+
         log.info("SecondMainClass.downloadAllC3Images. imageDataList size={}", metaDataTotal.getTotal());
         int count = 0;
         try {
@@ -100,6 +99,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
             }
         }
         log.info("ImagesDownloadingServiceImpl.downloadImages. Total count is {}, jpeg with size > 100Kb is {}", count, successfullyDownloadedImages.size());
+
         return successfullyDownloadedImages.size();
     }
 

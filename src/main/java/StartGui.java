@@ -5,6 +5,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 0. Сделать расчет продолжительности видео
+ * -1. Увеличить размер графических элеметнов.
+ * 0. Проверить на больших данных
+ * 0.1 Исправить название конечного файла
  * 0.5 Показывать информацию по загрузке в гуи
- * 1. Сначала сделать запуск ffmpeg в идее
- * 2. Проверить загрузку картинок на скомпилировнном варианте.
  * 3. Сделать графический интерфейс получше
  * 4. Разобраться с многопоточностью в javafx.
  * 5. Разобраться, можно ли ffmpeg добавить в джарник, чтобы его не устанавливать на компе.
@@ -49,15 +50,20 @@ public class StartGui extends Application {
 
     @Override
     public void start(Stage stage) {
-        log.info("SecondMainClass.start. Starting visual interface.");
+        log.info("StartGui.start. Starting visual interface.");
         VBox group = new VBox();
         group.setPadding(new Insets(10));
 
         DateTimePicker startDatePicker = new DateTimePicker();
+        startDatePicker.setPrefHeight(30);
         DateTimePicker endDatePicker = new DateTimePicker();
+        endDatePicker.setPrefHeight(30);
         Button butStartDownloadImages = new Button("Download images");
+        butStartDownloadImages.setPrefHeight(30);
+        butStartDownloadImages.setFont(Font.font(14));
         Button butStartCreatingVideo = new Button("Create video");
-
+        butStartCreatingVideo.setPrefHeight(30);
+        butStartCreatingVideo.setFont(Font.font(14));
         butStartDownloadImages.setOnAction(action -> {
             LocalDateTime startDateObservation = startDatePicker.getDateTimeValue();
             LocalDateTime endDateObservation = endDatePicker.getDateTimeValue();
@@ -72,6 +78,8 @@ public class StartGui extends Application {
         textArea.setMinHeight(70);
 
         Button butSelectMultiAudioFiles = new Button("Select audio files");
+        butSelectMultiAudioFiles.setPrefHeight(30);
+        butSelectMultiAudioFiles.setFont(Font.font(14));
 
         butSelectMultiAudioFiles.setOnAction(event -> {
             textArea.clear();
@@ -101,16 +109,16 @@ public class StartGui extends Application {
     }
 
     public static void downloadImages(LocalDateTime observStartDate, LocalDateTime observEndDate) {
-        log.info("SecondMainClass.downloadImages. Start Date={}, endDate={}", observStartDate, observEndDate);
+        log.info("StartGui.downloadImages. Start Date={}, endDate={}", observStartDate, observEndDate);
         imagesDownloadingService.setObservStartDate(observStartDate);
         imagesDownloadingService.setObservEndDate(observEndDate);
-        log.info("SecondMainClass.downloadImages. downloadingService with query={}", imagesDownloadingService.getQuery());
+        log.info("StartGui.downloadImages. downloadingService with query={}", imagesDownloadingService.getQuery());
         try {
             imagesDownloadingService.downloadImagesMetadata();
         } catch (IOException e) {
-            log.error("SecondMainClass.downloadImages. {}", e.getStackTrace());
+            log.error("StartGui.downloadImages. ", e);
         }
-        log.info("SecondMainClass.downloadImages. metadata contains {} image's info ", imagesDownloadingService.getMetaDataTotal());
+        log.info("StartGui.downloadImages. metadata contains {} image's info ", imagesDownloadingService.getMetaDataTotal().getTotal());
         imagesDownloadingService.downloadImages();
         imagesDownloadingService.createListImagesFileForFmpeg();
     }
