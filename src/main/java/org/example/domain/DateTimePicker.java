@@ -1,4 +1,4 @@
-package domain;
+package org.example.domain;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
