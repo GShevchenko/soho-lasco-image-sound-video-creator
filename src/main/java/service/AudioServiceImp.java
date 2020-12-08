@@ -9,7 +9,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,7 +23,7 @@ public class AudioServiceImp {
     public void createListImagesFileForFmpeg(List<File> audioFiles) {
         log.info("AudioServiceImp.createListImagesFileForFmpeg. List size={}", audioFiles.size());
         Path path = Paths.get( "audio.txt");
-        try(BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))){
+        try(BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)){
             for (File file: audioFiles){
                 writer.write("file " + "'" + file.getAbsolutePath() + "'\n");
                 writer.newLine();
@@ -47,7 +47,7 @@ public class AudioServiceImp {
                 float frameRate = format.getFrameRate();
                 summaryAudioDuration += (audioFileLength / (frameSize * frameRate));
             } catch (UnsupportedAudioFileException | IOException exception) {
-
+                    log.error("AudioServiceImp.setSummaryDuration. ", exception);
             }
         }
 

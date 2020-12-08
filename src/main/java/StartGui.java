@@ -4,6 +4,8 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
@@ -13,7 +15,6 @@ import service.AudioServiceImp;
 import service.FfmpegVideoService;
 import service.ImagesDownloadingServiceImpl;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -37,7 +38,6 @@ import java.util.List;
 @Slf4j
 public class StartGui extends Application {
 
-    private Desktop desktop = Desktop.getDesktop();
     private static FfmpegVideoService ffmpegVideoService = new FfmpegVideoService();
     private static ImagesDownloadingServiceImpl imagesDownloadingService = new ImagesDownloadingServiceImpl();
     private static AudioServiceImp audioService = new AudioServiceImp();
@@ -52,11 +52,22 @@ public class StartGui extends Application {
     public void start(Stage stage) {
         log.info("StartGui.start. Starting visual interface.");
         VBox group = new VBox();
+        GridPane gridPane = new GridPane();
+        HBox boxForDateTimePickers = new HBox();
+        boxForDateTimePickers.setSpacing(10);
+        boxForDateTimePickers.scaleYProperty();
         group.setPadding(new Insets(10));
+        gridPane.add(boxForDateTimePickers, 0, 0);
+        gridPane.add(group, 0, 1);
 
         DateTimePicker startDatePicker = new DateTimePicker();
-        startDatePicker.setPrefHeight(30);
         DateTimePicker endDatePicker = new DateTimePicker();
+        boxForDateTimePickers.getChildren().addAll(startDatePicker, endDatePicker);
+
+        startDatePicker.setOnAction(action -> {
+            endDatePicker.setDateTimeValue(startDatePicker.getDateTimeValue());
+        });
+        startDatePicker.setPrefHeight(30);
         endDatePicker.setPrefHeight(30);
         Button butStartDownloadImages = new Button("Download images");
         butStartDownloadImages.setPrefHeight(30);
@@ -87,39 +98,30 @@ public class StartGui extends Application {
             createListAudioFile(textArea, files);
         });
 
-        group.getChildren().addAll(startDatePicker, endDatePicker, butStartDownloadImages, butSelectMultiAudioFiles, textArea, butStartCreatingVideo);
+        group.getChildren().addAll(butStartDownloadImages, butSelectMultiAudioFiles, textArea, butStartCreatingVideo);
 
         stage.setTitle("SOHO-image-sound-video processor");
-        Scene scene = new Scene(group, 550, 500);
+        Scene scene = new Scene(gridPane, 550, 500);
         stage.setScene(scene);
         stage.show();
     }
 
     private void startCreatingVideo() {
         int videoRate = imagesDownloadingService.calculateVideoRate(AudioServiceImp.summaryAudioDuration);
-        ffmpegVideoService.createVideo(imagesDownloadingService.getPathToJpegListFile(), audioService.getPathToAudioListFie(), videoRate);
-    }
-
-    private void openFile(File file) {
-        try {
-            this.desktop.open(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        ffmpegVideoService.createVideo(imagesDownloadingService.getPathToJpegListFile(), audioService.getPathToAudioListFie(), videoRate, imagesDownloadingService.getObservStartDate(), imagesDownloadingService.getObservEndDate(), 0);
     }
 
     public static void downloadImages(LocalDateTime observStartDate, LocalDateTime observEndDate) {
         log.info("StartGui.downloadImages. Start Date={}, endDate={}", observStartDate, observEndDate);
         imagesDownloadingService.setObservStartDate(observStartDate);
         imagesDownloadingService.setObservEndDate(observEndDate);
-        log.info("StartGui.downloadImages. downloadingService with query={}", imagesDownloadingService.getQuery());
         try {
             imagesDownloadingService.downloadImagesMetadata();
         } catch (IOException e) {
             log.error("StartGui.downloadImages. ", e);
         }
         log.info("StartGui.downloadImages. metadata contains {} image's info ", imagesDownloadingService.getMetaDataTotal().getTotal());
-        imagesDownloadingService.downloadImages();
+        imagesDownloadingService.downloadImagesParallel();
         imagesDownloadingService.createListImagesFileForFmpeg();
     }
 
@@ -134,6 +136,4 @@ public class StartGui extends Application {
         audioService.setSummaryDuration(files);
     }
 }
-//2009-01-02 00:42:03.538
-//2009-01-02 01:18:03.416
-//2014-01-01 00:44
+//2012-04-08 04:00

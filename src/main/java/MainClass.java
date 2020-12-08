@@ -50,7 +50,7 @@ public class MainClass {
 
     }
 
-    //Сделать обработку ошибки внутри метода
+    //TODO Сделать обработку ошибки внутри метода
     public static int downloadAllC3Images(List<ImageData> imageDataList) throws IOException {
         int count = 1;
         for (ImageData imageData : imageDataList) {

@@ -3,6 +3,7 @@ package service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.istack.NotNull;
 import domain.IImageMetadata;
+import domain.ImageMetadata;
 import domain.MetaTotal;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -14,13 +15,14 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -60,10 +62,23 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         URL url = new URL(getQuery());
         log.info("ImagesDownloadingServiceImpl.downloadImagesMetadata. {}", url.getQuery());
         ObjectMapper objectMapper = new ObjectMapper();
-//        String text = IOUtils.toString(url.openStream(), StandardCharsets.UTF_8.name());
-//        log.info("ImagesDownloadingServiceImpl.downloadImagesMetadata. text is {}", text);
         metaDataTotal = objectMapper.readValue(url, MetaTotal.class);
         url.openStream().close();
+    }
+
+    public Integer downloadImagesParallel() {
+        successfullyDownloadedImages.clear();
+        log.info("SecondMainClass.downloadImagesParallel. imageDataList size={}", metaDataTotal.getTotal());
+        try {
+            createFolderForJpegs();
+        } catch (IOException e) {
+            log.info("ImagesDownloadingServiceImpl.downloadImages" + e.getStackTrace());
+            return 0;
+        }
+        this.metaDataTotal.getData().parallelStream().forEach(this::downloadImage);
+        metaDataTotal.getData().clear();
+        log.info("ImagesDownloadingServiceImpl.downloadImagesParallel. jpeg with size > 100Kb is {}", successfullyDownloadedImages.size());
+        return successfullyDownloadedImages.size();
     }
 
     @Override
@@ -103,15 +118,38 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         return successfullyDownloadedImages.size();
     }
 
+    public void downloadImage(ImageMetadata imageMetadata) {
+        try {
+            URL url = new URL(imageMetadata.get1024JpegUrl());
+            log.info("ImagesDownloadingService.downloadImage. Try to download URL={}", url.getQuery());
+            ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
+            FileOutputStream fileOutputStream = new FileOutputStream(getFolderNameForJpegs() + imageMetadata.getJpegFileName());
+            long fileSize = fileOutputStream.getChannel()
+                    .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
+//            if (fileSize > PREVIEW_NOT_AVAILABLE_JPEG_SIZE) {
+//                successfullyDownloadedImages.add(imageMetadata);
+//            }
+            successfullyDownloadedImages.add(imageMetadata);
+
+            readableByteChannel.close();
+            fileOutputStream.close();
+        } catch (IOException ex) {
+            log.error("ImagesDownloadingServiceImpl.downloadImages. " + ex);
+        }
+    }
+
     @Override
     public void createListImagesFileForFmpeg() {
+
         Path path = Paths.get(getFolderNameForJpegs() + "images.txt");
-        try(BufferedWriter writer = Files.newBufferedWriter(path, Charset.forName("UTF-8"))){
-            for (IImageMetadata imageMetadata:successfullyDownloadedImages){
+        try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            successfullyDownloadedImages.sort(Comparator.comparing(
+                    o -> LocalDateTime.parse(o.getBeginObservationDate().split("\\.")[0], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))));
+            for (IImageMetadata imageMetadata : successfullyDownloadedImages) {
                 writer.write("file '" + getFolderNameForJpegs() + imageMetadata.getJpegFileName() + "'");
                 writer.newLine();
             }
-        }catch(IOException ex){
+        } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
