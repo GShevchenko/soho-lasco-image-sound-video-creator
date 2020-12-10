@@ -95,6 +95,9 @@ public class StartGui extends Application {
         butSelectMultiAudioFiles.setOnAction(event -> {
             textArea.clear();
             List<File> files = fileChooser.showOpenMultipleDialog(stage);
+            if (files != null && files.size() > 0) {
+                fileChooser.setInitialDirectory(new File(files.get(0).getParent()));
+            }
             createListAudioFile(textArea, files);
         });
 
