@@ -2,8 +2,7 @@ import domain.DateTimePicker;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -52,6 +51,9 @@ public class StartGui extends Application {
     @Override
     public void start(Stage stage) {
         log.info("StartGui.start. Starting visual interface.");
+        Tab secondTabForDownloadingImagesAndCreatingVideo = new Tab("JPEG video processor");
+        Tab thirdTabForCombiningVideo = new Tab("Combine video files");
+
         VBox group = new VBox();
         GridPane gridPane = new GridPane();
         HBox boxForDateTimePickers = new HBox();
@@ -105,11 +107,13 @@ public class StartGui extends Application {
             }
             createListAudioFile(textArea, files);
         });
-
         group.getChildren().addAll(butStartDownloadImages, butSelectMultiAudioFiles, textArea, butStartCreatingVideo);
+        secondTabForDownloadingImagesAndCreatingVideo.setContent(gridPane);
+        TabPane tabPane = new TabPane(secondTabForDownloadingImagesAndCreatingVideo, thirdTabForCombiningVideo);
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
         stage.setTitle("SOHO-image-sound-video processor");
-        Scene scene = new Scene(gridPane, 550, 500);
+        Scene scene = new Scene(tabPane, 550, 500);
         stage.setScene(scene);
         stage.show();
     }
