@@ -18,6 +18,7 @@ import service.ImagesDownloadingServiceImpl;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 /**
@@ -61,11 +62,14 @@ public class StartGui extends Application {
         gridPane.add(group, 0, 1);
 
         DateTimePicker startDatePicker = new DateTimePicker();
+        startDatePicker.setDateTimeValue(LocalDateTime.of(2012, Month.MARCH, 6, 14, 0));
         DateTimePicker endDatePicker = new DateTimePicker();
+        endDatePicker.setDateTimeValue(LocalDateTime.of(2012, Month.MARCH, 7, 14, 0));
+
         boxForDateTimePickers.getChildren().addAll(startDatePicker, endDatePicker);
 
         startDatePicker.setOnAction(action -> {
-            endDatePicker.setDateTimeValue(startDatePicker.getDateTimeValue());
+            endDatePicker.setDateTimeValue(startDatePicker.getDateTimeValue().plusDays(1));
         });
         startDatePicker.setPrefHeight(30);
         endDatePicker.setPrefHeight(30);
@@ -77,6 +81,7 @@ public class StartGui extends Application {
         butStartCreatingVideo.setFont(Font.font(14));
         butStartDownloadImages.setOnAction(action -> {
             LocalDateTime startDateObservation = startDatePicker.getDateTimeValue();
+            startDatePicker.setUserData(startDateObservation);
             LocalDateTime endDateObservation = endDatePicker.getDateTimeValue();
             downloadImages(startDateObservation, endDateObservation);
         });
