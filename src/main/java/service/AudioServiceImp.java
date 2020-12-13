@@ -38,6 +38,7 @@ public class AudioServiceImp {
     }
 
     public void setSummaryDuration(List<File> audioFiles) {
+        summaryAudioDuration = 0;
         log.info("AudioServiceImp.setSummaryDuration. List size={}", audioFiles.size());
         for (File audioFile : audioFiles) {
             try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile)) {
