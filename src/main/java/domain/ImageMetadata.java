@@ -33,6 +33,8 @@ public class ImageMetadata implements IImageMetadata, Serializable {
     public String postcardUrl;
     @JsonIgnoreProperties
     public String details;
+    @JsonIgnoreProperties
+    public long jpegSize;
 
     @Override
     public boolean isContainC3Image() {
@@ -51,6 +53,14 @@ public class ImageMetadata implements IImageMetadata, Serializable {
 
     public String getJpegFileName() {
         return beginDate.substring(0, beginDate.lastIndexOf(":")).replaceAll("-", "").replace(" ", "").replace(":", "")+ ".jpg";
+    }
+
+    public long getJpegSize() {
+        return jpegSize;
+    }
+
+    public void setJpegSize(long jpegSize) {
+        this.jpegSize = jpegSize;
     }
 
 
