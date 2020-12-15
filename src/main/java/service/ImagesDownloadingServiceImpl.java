@@ -142,7 +142,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             successfullyDownloadedImages.sort(Comparator.comparing(
                     o -> LocalDateTime.parse(o.getBeginObservationDate().split("\\.")[0], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))));
-            IImageMetadata previousPreviewAvailable = successfullyDownloadedImages.get(0);
+            IImageMetadata previousPreviewAvailable = successfullyDownloadedImages.stream().filter(im -> ((ImageMetadata)im).getJpegSize() > PREVIEW_NOT_AVAILABLE_JPEG_SIZE).findFirst().get();
             for (IImageMetadata imageMetadata : successfullyDownloadedImages) {
                 if (((ImageMetadata) imageMetadata).getJpegSize() > PREVIEW_NOT_AVAILABLE_JPEG_SIZE) {
                     previousPreviewAvailable = imageMetadata;
