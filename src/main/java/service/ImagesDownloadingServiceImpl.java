@@ -32,7 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @NoArgsConstructor
 public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
-    public static final int PREVIEW_NOT_AVAILABLE_JPEG_SIZE = 12978;
+    public static final long PREVIEW_NOT_AVAILABLE_JPEG_SIZE = 12978;
     public static final String JPEG_LIST_FILE_NAME_FOR_FFMPEG = "images.txt";
     public static final String AUDIO_LIST_FILE_FOR_FFMPEG = "audio.txt";
     public static String templateQuery = "http://ssa.esac.esa.int/ssa/aio/metadata-action?RESOURCE_CLASS=OBSERVATION&SELECTED_FIELDS=OBSERVATION&QUERY=(INSTRUMENT.NAME=='LASCO'+AND+OBSERVING_MODE.NAME=='C3')+AND+OBSERVATION.BEGINDATE>'%s'+AND+OBSERVATION.BEGINDATE<'%s'&RETURN_TYPE=JSON&ORDER_BY=OBSERVATION.BEGINDATE";
@@ -126,9 +126,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
             FileOutputStream fileOutputStream = new FileOutputStream(getFolderNameForJpegs() + imageMetadata.getJpegFileName());
             long fileSize = fileOutputStream.getChannel()
                     .transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
-//            if (fileSize > PREVIEW_NOT_AVAILABLE_JPEG_SIZE) {
-//                successfullyDownloadedImages.add(imageMetadata);
-//            }
+            imageMetadata.setJpegSize(fileSize);
             successfullyDownloadedImages.add(imageMetadata);
 
             readableByteChannel.close();
@@ -140,13 +138,18 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
 
     @Override
     public void createListImagesFileForFmpeg() {
-
         Path path = Paths.get(getFolderNameForJpegs() + "images.txt");
         try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             successfullyDownloadedImages.sort(Comparator.comparing(
                     o -> LocalDateTime.parse(o.getBeginObservationDate().split("\\.")[0], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))));
+            IImageMetadata previousPreviewAvailable = successfullyDownloadedImages.stream().filter(im -> ((ImageMetadata)im).getJpegSize() > PREVIEW_NOT_AVAILABLE_JPEG_SIZE).findFirst().get();
             for (IImageMetadata imageMetadata : successfullyDownloadedImages) {
-                writer.write("file '" + getFolderNameForJpegs() + imageMetadata.getJpegFileName() + "'");
+                if (((ImageMetadata) imageMetadata).getJpegSize() > PREVIEW_NOT_AVAILABLE_JPEG_SIZE) {
+                    previousPreviewAvailable = imageMetadata;
+                    writer.write("file '" + getFolderNameForJpegs() + imageMetadata.getJpegFileName() + "'");
+                } else {
+                    writer.write("file '" + getFolderNameForJpegs() + previousPreviewAvailable.getJpegFileName() + "'");
+                }
                 writer.newLine();
             }
         } catch (IOException ex) {
