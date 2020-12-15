@@ -11,6 +11,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import service.AudioServiceImp;
+import service.ConcatenateVideosService;
 import service.FfmpegVideoService;
 import service.ImagesDownloadingServiceImpl;
 
@@ -41,6 +42,7 @@ public class StartGui extends Application {
     private static FfmpegVideoService ffmpegVideoService = new FfmpegVideoService();
     private static ImagesDownloadingServiceImpl imagesDownloadingService = new ImagesDownloadingServiceImpl();
     private static AudioServiceImp audioService = new AudioServiceImp();
+    private static ConcatenateVideosService concatenateVideosService = new ConcatenateVideosService();
 
     public static void main(String[] args) {
         log.info("STARTING PROGRAM...");
@@ -90,25 +92,54 @@ public class StartGui extends Application {
 
         butStartCreatingVideo.setOnAction(action -> startCreatingVideo());
 
-        final FileChooser fileChooser = new FileChooser();
+        final FileChooser audioFileChooser = new FileChooser();
+        final FileChooser videoFileChooser = new FileChooser();
 
-        TextArea textArea = new TextArea();
-        textArea.setMinHeight(70);
+        TextArea audioFilesTextArea = new TextArea();
+        audioFilesTextArea.setMinHeight(70);
+
+        TextArea videoFilesTextArea = new TextArea();
+        videoFilesTextArea.setMinHeight(70);
 
         Button butSelectMultiAudioFiles = new Button("Select audio files");
         butSelectMultiAudioFiles.setPrefHeight(30);
         butSelectMultiAudioFiles.setFont(Font.font(14));
 
         butSelectMultiAudioFiles.setOnAction(event -> {
-            textArea.clear();
-            List<File> files = fileChooser.showOpenMultipleDialog(stage);
+            audioFilesTextArea.clear();
+            List<File> files = audioFileChooser.showOpenMultipleDialog(stage);
             if (files != null && files.size() > 0) {
-                fileChooser.setInitialDirectory(new File(files.get(0).getParent()));
+                audioFileChooser.setInitialDirectory(new File(files.get(0).getParent()));
             }
-            createListAudioFile(textArea, files);
+            createListAudioFile(audioFilesTextArea, files);
         });
-        group.getChildren().addAll(butStartDownloadImages, butSelectMultiAudioFiles, textArea, butStartCreatingVideo);
+
+
+        Button butSelectMultiVideoFiles = new Button("Select video files");
+        butSelectMultiVideoFiles.setPrefHeight(30);
+        butSelectMultiVideoFiles.setFont(Font.font(14));
+        Button concatenateVideosButt = new Button("Concatenate videos");
+        concatenateVideosButt.setPrefHeight(30);
+        concatenateVideosButt.setFont(Font.font(14));
+        butSelectMultiVideoFiles.setOnAction(event -> {
+            videoFilesTextArea.clear();
+            List<File> files = videoFileChooser.showOpenMultipleDialog(stage);
+            if (files != null && files.size() > 0) {
+                videoFileChooser.setInitialDirectory(new File(files.get(0).getParent()));
+            }
+            for (File file : files) {
+                videoFilesTextArea.appendText(file.getAbsolutePath() + "\n");
+            }
+            concatenateVideosService.setVideoFiles(files);
+        });
+        concatenateVideosButt.setOnAction( event -> {
+            concatenateVideosService.concatenateVideoFiles();
+        });
+        group.getChildren().addAll(butStartDownloadImages, butSelectMultiAudioFiles, audioFilesTextArea, butStartCreatingVideo);
+
         secondTabForDownloadingImagesAndCreatingVideo.setContent(gridPane);
+        thirdTabForCombiningVideo.setContent(new VBox(videoFilesTextArea, butSelectMultiVideoFiles, concatenateVideosButt));
+
         TabPane tabPane = new TabPane(secondTabForDownloadingImagesAndCreatingVideo, thirdTabForCombiningVideo);
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
@@ -135,6 +166,10 @@ public class StartGui extends Application {
         log.info("StartGui.downloadImages. metadata contains {} image's info ", imagesDownloadingService.getMetaDataTotal().getTotal());
         imagesDownloadingService.downloadImagesParallel();
         imagesDownloadingService.createListImagesFileForFmpeg();
+    }
+
+    private void createListVideoFiles(TextArea textArea, List<File> files) {
+
     }
 
     private void createListAudioFile(TextArea textArea, List<File> files) {
