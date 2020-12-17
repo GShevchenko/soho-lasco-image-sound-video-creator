@@ -18,7 +18,7 @@ import java.util.List;
 @Slf4j
 public class AudioServiceImp {
 
-    public static int summaryAudioDuration = 0;
+    public static double summaryAudioDuration = 0;
 
     public void createListImagesFileForFmpeg(List<File> audioFiles) {
         log.info("AudioServiceImp.createListImagesFileForFmpeg. List size={}", audioFiles.size());
@@ -44,6 +44,7 @@ public class AudioServiceImp {
             try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile)) {
                 AudioFormat format = audioInputStream.getFormat();
                 long audioFileLength = audioFile.length();
+                log.info("AudioServiceImp.setSummaryDuration. File's {} length is {}", audioFile.getName(), audioFileLength);
                 int frameSize = format.getFrameSize();
                 float frameRate = format.getFrameRate();
                 summaryAudioDuration += (audioFileLength / (frameSize * frameRate));

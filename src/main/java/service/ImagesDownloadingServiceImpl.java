@@ -178,8 +178,8 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         return DateTimeFormatter.ofPattern("yyyy-MM-dd%20HH:mm").format(dateTimeWithT);
     }
 
-    public int calculateVideoRate(int audioDuration) {
+    public int calculateVideoRate(double audioDuration) {
         log.info("ImagesDownloadingServiceImpl.calculateVideoRate. audioDuration={}, imagesCount={}", audioDuration, successfullyDownloadedImages.size());
-        return successfullyDownloadedImages.size() / audioDuration;
+        return (int) Math.round(successfullyDownloadedImages.size() / audioDuration);
     }
 }
