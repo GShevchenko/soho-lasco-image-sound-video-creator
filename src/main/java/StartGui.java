@@ -7,6 +7,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +18,11 @@ import service.ImagesDownloadingServiceImpl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * -1. Увеличить размер графических элеметнов.
@@ -57,27 +60,31 @@ public class StartGui extends Application {
         Tab thirdTabForCombiningVideo = new Tab("Combine video files");
 
         VBox group = new VBox();
+        HBox selectPreviousDownloadedImages = new HBox();
         GridPane gridPane = new GridPane();
         HBox boxForDateTimePickers = new HBox();
         boxForDateTimePickers.setSpacing(10);
         boxForDateTimePickers.scaleYProperty();
         group.setPadding(new Insets(10));
         gridPane.add(boxForDateTimePickers, 0, 0);
-        gridPane.add(group, 0, 1);
+        gridPane.add(selectPreviousDownloadedImages, 0, 1);
+        gridPane.add(group, 0, 2);
+
+
 
         DateTimePicker startDatePicker = new DateTimePicker();
         startDatePicker.setDateTimeValue(LocalDateTime.of(2012, Month.MARCH, 6, 14, 0));
         DateTimePicker endDatePicker = new DateTimePicker();
         endDatePicker.setDateTimeValue(LocalDateTime.of(2012, Month.MARCH, 7, 14, 0));
 
-        boxForDateTimePickers.getChildren().addAll(startDatePicker, endDatePicker);
+        Button butStartDownloadImages = new Button("Get jpeg");
+        boxForDateTimePickers.getChildren().addAll(startDatePicker, endDatePicker, butStartDownloadImages);
 
         startDatePicker.setOnAction(action -> {
             endDatePicker.setDateTimeValue(startDatePicker.getDateTimeValue().plusDays(1));
         });
         startDatePicker.setPrefHeight(30);
         endDatePicker.setPrefHeight(30);
-        Button butStartDownloadImages = new Button("Download images");
         butStartDownloadImages.setPrefHeight(30);
         butStartDownloadImages.setFont(Font.font(14));
         Button butStartCreatingVideo = new Button("Create video");
@@ -97,6 +104,7 @@ public class StartGui extends Application {
 
         TextArea audioFilesTextArea = new TextArea();
         audioFilesTextArea.setMinHeight(70);
+
 
         TextArea videoFilesTextArea = new TextArea();
         videoFilesTextArea.setMinHeight(70);
@@ -135,23 +143,41 @@ public class StartGui extends Application {
         concatenateVideosButt.setOnAction( event -> {
             concatenateVideosService.concatenateVideoFiles();
         });
-        group.getChildren().addAll(butStartDownloadImages, butSelectMultiAudioFiles, audioFilesTextArea, butStartCreatingVideo);
+        group.getChildren().addAll(butSelectMultiAudioFiles, audioFilesTextArea, butStartCreatingVideo);
 
         secondTabForDownloadingImagesAndCreatingVideo.setContent(gridPane);
         thirdTabForCombiningVideo.setContent(new VBox(videoFilesTextArea, butSelectMultiVideoFiles, concatenateVideosButt));
+
+        TextArea jpegDirTA = new TextArea();
+        Button jpegDirBtn = new Button("Select dir with jpeg");
+        jpegDirBtn.setFont(Font.font(14));
+        jpegDirTA.setPrefSize(500, 20);
+        DirectoryChooser jpegDirChr = new DirectoryChooser();
+        selectPreviousDownloadedImages.getChildren().addAll(jpegDirTA, jpegDirBtn);
+        jpegDirBtn.setOnAction( e ->{
+            jpegDirTA.clear();
+            File possibleJpegDir = jpegDirChr.showDialog(stage);
+            Optional<Path> optionalPath = setJpegDirToVideProcessor(possibleJpegDir);
+            optionalPath.ifPresent(p -> jpegDirTA.setText(p.toString()));
+        });
 
         TabPane tabPane = new TabPane(secondTabForDownloadingImagesAndCreatingVideo, thirdTabForCombiningVideo);
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
 
         stage.setTitle("SOHO-image-sound-video processor");
-        Scene scene = new Scene(tabPane, 550, 500);
+        Scene scene = new Scene(tabPane, 700, 500);
         stage.setScene(scene);
         stage.show();
     }
 
     private void startCreatingVideo() {
         int videoRate = imagesDownloadingService.calculateVideoRate(AudioServiceImp.summaryAudioDuration);
-        ffmpegVideoService.createVideo(imagesDownloadingService.getPathToJpegListFile(), audioService.getPathToAudioListFie(), videoRate, imagesDownloadingService.getObservStartDate(), imagesDownloadingService.getObservEndDate(), 0);
+        ffmpegVideoService.createVideo(imagesDownloadingService.getCurrentFolderWithJpegFile(), audioService.getPathToAudioListFie(), videoRate, imagesDownloadingService.getObservStartDate(), imagesDownloadingService.getObservEndDate(), 0);
+    }
+
+    private Optional<Path> setJpegDirToVideProcessor(File jpegDir) {
+        log.info("StartGui.setJpegDirToVideProcessor. jpegDir={}", jpegDir);
+        return imagesDownloadingService.setJpegDir(jpegDir);
     }
 
     public static void downloadImages(LocalDateTime observStartDate, LocalDateTime observEndDate) {
@@ -166,10 +192,6 @@ public class StartGui extends Application {
         log.info("StartGui.downloadImages. metadata contains {} image's info ", imagesDownloadingService.getMetaDataTotal().getTotal());
         imagesDownloadingService.downloadImagesParallel();
         imagesDownloadingService.createListImagesFileForFmpeg();
-    }
-
-    private void createListVideoFiles(TextArea textArea, List<File> files) {
-
     }
 
     private void createListAudioFile(TextArea textArea, List<File> files) {

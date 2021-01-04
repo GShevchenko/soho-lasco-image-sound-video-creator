@@ -19,11 +19,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Stream;
 
 @Slf4j
 @Data
@@ -45,6 +46,8 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
     private LocalDateTime observEndDate;
     private MetaTotal metaDataTotal;
     private List<IImageMetadata> successfullyDownloadedImages = new ArrayList<>();
+    public Path currentFolderWithJpegFile;
+    private int imagesCount;
 
     private String query;
 
@@ -78,7 +81,8 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         this.metaDataTotal.getData().parallelStream().forEach(this::downloadImage);
         metaDataTotal.getData().clear();
         log.info("ImagesDownloadingServiceImpl.downloadImagesParallel. jpeg with size > 100Kb is {}", successfullyDownloadedImages.size());
-        return successfullyDownloadedImages.size();
+        imagesCount = successfullyDownloadedImages.size();
+        return imagesCount;
     }
 
     @Override
@@ -115,7 +119,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         }
         log.info("ImagesDownloadingServiceImpl.downloadImages. Total count is {}, jpeg with size > 100Kb is {}", count, successfullyDownloadedImages.size());
 
-        return successfullyDownloadedImages.size();
+        return imagesCount;
     }
 
     public void downloadImage(ImageMetadata imageMetadata) {
@@ -157,13 +161,57 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
         }
     }
 
+
+    public Path getCurrentFolderWithJpegFile() {
+        return currentFolderWithJpegFile;
+    }
+
+    public Optional<Path> setJpegDir(File parentDir) {
+        log.info("ImagesDownloadingServiceImpl.setJpegDir. parentDir={}", parentDir);
+        if (!parentDir.isDirectory()) {
+            return Optional.empty();
+        }
+        Optional<File> listJpegFile = Arrays.stream(parentDir.listFiles()).filter(f -> "images.txt".equals(f.getName()))
+                .findFirst();
+        listJpegFile.ifPresent(file -> {
+            this.currentFolderWithJpegFile = Paths.get(file.getAbsolutePath());
+            this.initData(currentFolderWithJpegFile);
+        });
+        log.info("ImagesDownloadingServiceImpl.setJpegDir. currentFolderWithJpegFile={}", currentFolderWithJpegFile);
+        return Optional.ofNullable(currentFolderWithJpegFile);
+    }
+
+    private void initData(Path pathToJpegListFile) {
+        log.info("ImagesDownloadingServiceImpl.initData. dirWithJpeg={}", pathToJpegListFile);
+        try (Stream<String> stream = Files.lines(pathToJpegListFile, StandardCharsets.UTF_8)) {
+            //TODO возможно лучше сделать поле, в котором хранить количество записей в текстовом файле
+            imagesCount = (int) stream.count();
+        } catch (IOException exception) {
+            log.error("ImagesDownloadingService.initData\n ", exception);
+        }
+        setDateBoundaries(pathToJpegListFile.getParent().getFileName().toString());
+    }
+    private void setDateBoundaries(String currentFolderWithJpegFile) {
+        log.info("ImagesDownloadingServiceImpl.setDateBoundaries. currentFolderWithJpegFile={}", currentFolderWithJpegFile);
+        String[] doubleDateTime = currentFolderWithJpegFile.split("_");
+        this.observStartDate = parseToLocalDateTime(doubleDateTime[0], doubleDateTime[1]);
+        this.observEndDate = parseToLocalDateTime(doubleDateTime[2], doubleDateTime[3]);
+    }
+
+    private LocalDateTime parseToLocalDateTime(String date, String time) {
+        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.BASIC_ISO_DATE);
+        LocalTime localTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("HHmm"));
+        return LocalDateTime.of(localDate, localTime);
+    }
+
     @Override
     public String getPathToJpegListFile() {
         return getFolderNameForJpegs() + JPEG_LIST_FILE_NAME_FOR_FFMPEG;
     }
 
     public void createFolderForJpegs() throws IOException {
-        Files.createDirectories(Paths.get(getFolderNameForJpegs()));
+        Path directories = Files.createDirectories(Paths.get(getFolderNameForJpegs()));
+        setCurrentFolderWithJpegFile(Paths.get(directories.getFileName() + "images.txt"));
     }
 
     public String getFolderNameForJpegs() {
@@ -179,7 +227,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
     }
 
     public int calculateVideoRate(double audioDuration) {
-        log.info("ImagesDownloadingServiceImpl.calculateVideoRate. audioDuration={}, imagesCount={}", audioDuration, successfullyDownloadedImages.size());
-        return (int) Math.round(successfullyDownloadedImages.size() / audioDuration);
+        log.info("ImagesDownloadingServiceImpl.calculateVideoRate. audioDuration={}, imagesCount={}", audioDuration, imagesCount);
+        return (int) Math.round(imagesCount / audioDuration);
     }
 }
