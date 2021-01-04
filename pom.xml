@@ -6,7 +6,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>solar-download-images</artifactId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>2.1.1-SNAPSHOT</version>
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.opencsv/opencsv -->
@@ -65,6 +65,13 @@
             <version>1.18.16</version>
             <scope>provided</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jfree/jfreechart -->
+        <dependency>
+            <groupId>org.jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+
     </dependencies>
 
 
