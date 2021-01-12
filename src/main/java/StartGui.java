@@ -172,7 +172,9 @@ public class StartGui extends Application {
 
     private void startCreatingVideo() {
         int videoRate = imagesDownloadingService.calculateVideoRate(AudioServiceImp.summaryAudioDuration);
-        ffmpegVideoService.createVideo(imagesDownloadingService.getCurrentFolderWithJpegFile(), audioService.getPathToAudioListFie(), videoRate, imagesDownloadingService.getObservStartDate(), imagesDownloadingService.getObservEndDate(), 0);
+        ffmpegVideoService.createVideo(imagesDownloadingService.getCurrentFolderWithJpegFile(), audioService.getPathToAudioListFie(),
+                videoRate, imagesDownloadingService.getObservStartDate(),
+                imagesDownloadingService.getObservEndDate(), imagesDownloadingService.getImagesCount(), 0);
     }
 
     private Optional<Path> setJpegDirToVideProcessor(File jpegDir) {

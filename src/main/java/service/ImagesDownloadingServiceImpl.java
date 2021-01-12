@@ -211,7 +211,7 @@ public class ImagesDownloadingServiceImpl implements ImagesDownloadingService {
 
     public void createFolderForJpegs() throws IOException {
         Path directories = Files.createDirectories(Paths.get(getFolderNameForJpegs()));
-        setCurrentFolderWithJpegFile(Paths.get(directories.getFileName() + "images.txt"));
+        setCurrentFolderWithJpegFile(Paths.get(directories.getFileName() + "/images.txt"));
     }
 
     public String getFolderNameForJpegs() {

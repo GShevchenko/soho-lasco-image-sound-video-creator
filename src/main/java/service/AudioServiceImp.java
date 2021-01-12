@@ -33,6 +33,10 @@ public class AudioServiceImp {
         }
     }
 
+    public double getSummaryAudioDuration() {
+        return summaryAudioDuration;
+    }
+
     public String getPathToAudioListFie() {
         return "audio.txt";
     }
@@ -49,7 +53,7 @@ public class AudioServiceImp {
                 float frameRate = format.getFrameRate();
                 summaryAudioDuration += (audioFileLength / (frameSize * frameRate));
             } catch (UnsupportedAudioFileException | IOException exception) {
-                    log.error("AudioServiceImp.setSummaryDuration. ", exception);
+                log.error("AudioServiceImp.setSummaryDuration. ", exception);
             }
         }
 

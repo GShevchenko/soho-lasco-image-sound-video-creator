@@ -12,11 +12,13 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class FfmpegVideoService {
     private static final String COMPILE_VIDEO_CMD_FFMPEG_WITHOUT_FULL_PATH = "ffmpeg -r %d -f concat -safe 0 -i %s -f concat -safe 0 -i %s -c:a aac -pix_fmt yuv420p -crf 23 -r 24 -shortest -y %s";
+    private static final String COMPILE_VIDEO_CMD_FFMPEG_WITH_METADATA = "ffmpeg -r %d -f concat -safe 0 -i %s -f concat -safe 0 -i %s -c:a aac -pix_fmt yuv420p -crf 23 -r 24 -shortest -metadata description=\"%d\" -y %s";
 
 
-    public void createVideo(Path pathToJpegListFile, String pathToAudioListFile, int videoRate, LocalDateTime startObservDate, LocalDateTime endObservDate, int shiftInHours) {
+    public void createVideo(Path pathToJpegListFile, String pathToAudioListFile, int videoRate, LocalDateTime startObservDate, LocalDateTime endObservDate, int imageCount, int shiftInHours) {
         log.info("FfmpegVideoService.createVideo. pathToJpegListFile={}, pathToAudioListFile={}, videoRate={}", pathToJpegListFile, pathToAudioListFile, videoRate);
-        String command = String.format(COMPILE_VIDEO_CMD_FFMPEG_WITHOUT_FULL_PATH, videoRate, pathToJpegListFile.toAbsolutePath(), pathToAudioListFile, calculateVideoFileName(startObservDate, endObservDate, shiftInHours));
+//        String command = String.format(COMPILE_VIDEO_CMD_FFMPEG_WITHOUT_FULL_PATH, videoRate, pathToJpegListFile.toAbsolutePath(), pathToAudioListFile, calculateVideoFileName(startObservDate, endObservDate, shiftInHours));
+        String command = String.format(COMPILE_VIDEO_CMD_FFMPEG_WITH_METADATA, videoRate, pathToJpegListFile.toAbsolutePath(), pathToAudioListFile, imageCount, calculateVideoFileName(startObservDate, endObservDate, shiftInHours));
         log.info("cmd is {}", command);
         Process process = null;
         try {

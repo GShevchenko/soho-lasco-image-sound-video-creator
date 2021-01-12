@@ -1,9 +1,12 @@
 package domain;
 
+import javafx.scene.media.Media;
+import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.*;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Millisecond;
@@ -13,11 +16,13 @@ import org.jfree.data.time.TimeSeriesCollection;
 import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Date;
-import java.util.OptionalDouble;
-import java.util.Scanner;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
@@ -30,7 +35,7 @@ import java.util.stream.Stream;
  * 4. Сделать смещение и сохранить график. Повторять до достижения конца файла.
  */
 @Slf4j
-public class ChartVideoObject {
+public class ChartVideoProcessor {
 
     public static final int YEAR_POSITION = 5;
     public static final int MONTH_POSITION = 4;
@@ -43,6 +48,8 @@ public class ChartVideoObject {
     public static final int H_COMPONENT_POSITION = 6;
     public static final int D_COMPONENT_POSITION = 7;
     public static final int Z_COMPONENT_POSITION = 8;
+    private static final String COMPILE_VIDEO_CMD_FFMPEG_WITHOUT_FULL_PATH = "ffmpeg -r %d -f concat -safe 0 -i %s -f concat -safe 0 -i %s -c:a aac -pix_fmt yuv420p -crf 23 -r 24 -shortest -y %s";
+
 
     private File fileWithTxtData;
     //r
@@ -53,29 +60,33 @@ public class ChartVideoObject {
     private Integer displacement;
     private Boolean reachEndOfFile;
     public static final Function<String, Integer> STR_TO_INT_FUNCT = Integer::parseInt;
-    private Scanner scanner;
     private double averageH;
     private double averageZ;
     private double averageD;
+    private List<File> savedCharts;
+    private YRange yRange;
+    private double duration;
 
-    public ChartVideoObject(File fileWithTxtData, Integer numberSohoImages) throws FileNotFoundException {
+    public ChartVideoProcessor(File fileWithTxtData, Integer numberSohoImages) throws FileNotFoundException {
         log.info("start ChartVideoObject(), initCrudeDataTxt={}, numberSohoImages={}", fileWithTxtData, numberSohoImages);
         this.fileWithTxtData = fileWithTxtData;
         this.numberSohoImages = numberSohoImages;
-        this.scanner = new Scanner(fileWithTxtData);
         this.startingPosition = 0;
         setNoOfLinesInInitDataFile();
         this.displacement = noOfLinesInInitDataFile / numberSohoImages;
         this.reachEndOfFile = Boolean.FALSE;
+        this.savedCharts = new ArrayList<>();
         setAverages();
         log.info("end ChartVideoObject(), averageZ={}, averageD={}, averageH={}", averageZ, averageD, averageH);
 
     }
 
+
     private void setAverages() {
-        try (Stream zLines = Files.lines(fileWithTxtData.toPath());
-             Stream dLines = Files.lines(fileWithTxtData.toPath());
-             Stream hLines = Files.lines(fileWithTxtData.toPath())) {
+        try (Stream<String> zLines = Files.lines(fileWithTxtData.toPath());
+             Stream<String> dLines = Files.lines(fileWithTxtData.toPath());
+             Stream<String> hLines = Files.lines(fileWithTxtData.toPath())) {
+            //TODO сделать через бифункцию
             ToDoubleFunction<String> zToDoubleFunction = s -> Double.parseDouble(s.split(" ")[Z_COMPONENT_POSITION]);
             ToDoubleFunction<String> dToDoubleFunction = s -> Double.parseDouble(s.split(" ")[D_COMPONENT_POSITION]);
             ToDoubleFunction<String> hToDoubleFunction = s -> Double.parseDouble(s.split(" ")[H_COMPONENT_POSITION]);
@@ -111,7 +122,7 @@ public class ChartVideoObject {
 
 
     public TimeSeriesCollection getDataForPeriod() throws FileNotFoundException {
-        log.info("ChartVideoObject.getDataForFirst7Hour");
+        log.info("ChartVideoObject.getDataForPeriod start");
         TimeSeries hComponent = new TimeSeries("H-component");
         TimeSeries dComponent = new TimeSeries("D-component");
         TimeSeries zComponent = new TimeSeries("Z-component");
@@ -126,7 +137,7 @@ public class ChartVideoObject {
             scanner.nextLine();
             currentPosition++;
         }
-        log.info("ChartVideoObject.getDataForFirst7Hour(), processedLines={}, currentPosition={}, displacement={}", startingPosition, currentPosition, displacement);
+        log.info("ChartVideoObject.getDataForPeriod(), processedLines={}, currentPosition={}, displacement={}", startingPosition, currentPosition, displacement);
         Millisecond nextMillSec = startingPositionMillisec;
         Millisecond nexStartingPosition = startingPositionMillisec;
         while (scanner.hasNextLine() &&
@@ -136,7 +147,7 @@ public class ChartVideoObject {
             //TODO сделать через функцию
             hComponent.add(nextMillSec, 120 *(Double.parseDouble(nextLine[H_COMPONENT_POSITION]) - averageH));
             dComponent.add(nextMillSec, -120 * (Double.parseDouble(nextLine[D_COMPONENT_POSITION])- averageD));
-            zComponent.add(nextMillSec, -120 * Double.parseDouble(nextLine[Z_COMPONENT_POSITION]) - averageZ);
+            zComponent.add(nextMillSec, -120 * (Double.parseDouble(nextLine[Z_COMPONENT_POSITION]) - averageZ));
             ++currentPosition;
             if (currentPosition == startingPosition + displacement) {
                 nexStartingPosition = nextMillSec;
@@ -151,18 +162,28 @@ public class ChartVideoObject {
         dataset.addSeries(dComponent);
         startingPositionMillisec = nexStartingPosition;
         dataset.addSeries(zComponent);
+        log.info("ChartVideoObject.getDataForPeriod end");
         return dataset;
     }
 
     public void createAndSaveImage() throws IOException {
+        savedCharts.clear();
         while (!reachEndOfFile && startingPosition != noOfLinesInInitDataFile) {
-            log.info("ChartVideoObject.createAndSaveImage(), processedLines={}, noOfLinesInInitDataFile={}", startingPosition, noOfLinesInInitDataFile);
             TimeSeriesCollection timeSeriesCollection = getDataForPeriod();
+            log.info("Start ChartVideoObject.createAndSaveImage(), processedLines={}, noOfLinesInInitDataFile={}", startingPosition, noOfLinesInInitDataFile);
             JFreeChart timeSeriesChart = ChartFactory.createTimeSeriesChart("BGZ", null, null, timeSeriesCollection);
             XYPlot plot = (XYPlot) timeSeriesChart.getPlot();
             plot.setBackgroundPaint(Color.white);
             plot.setRangeGridlinePaint(Color.BLACK);
             plot.setDomainGridlinePaint(Color.BLACK);
+            NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+            yAxis.setRange(-60, 100);
+            yAxis.setTickUnit(new NumberTickUnit(20));
+            yAxis.setTickLabelFont(new Font("Dialog", Font.BOLD, 26));
+            DateAxis xAxis = (DateAxis) plot.getDomainAxis();
+//            xAxis.setTickUnit(new DateTickUnit(DateTickUnitType.MILLISECOND, 2*3600*1000, new SimpleDateFormat("HH:mm")));
+            xAxis.setTickLabelFont(new Font("Dialog", Font.BOLD, 26));
+
             XYLineAndShapeRenderer hRenderer = new XYLineAndShapeRenderer();
             hRenderer.setSeriesLinesVisible(0, true);
             hRenderer.setSeriesShapesVisible(0, false);
@@ -170,17 +191,56 @@ public class ChartVideoObject {
             hRenderer.setSeriesShapesVisible(2, false);
 
             plot.setRenderer(0, hRenderer);
-            plot.getRendererForDataset(plot.getDataset(0)).setSeriesPaint(0, Color.BLACK);
+            plot.getRendererForDataset(plot.getDataset(0)).setSeriesPaint(0, Color.GREEN);
             plot.getRendererForDataset(plot.getDataset(0)).setSeriesPaint(1, Color.BLUE);
             plot.getRendererForDataset(plot.getDataset(0)).setSeriesPaint(2, Color.RED);
             plot.setDomainCrosshairVisible(true);
             plot.setDomainCrosshairPaint(Color.BLACK);
             plot.setDomainCrosshairStroke(new BasicStroke(1f));
             plot.setDomainCrosshairValue(timeSeriesCollection.getXValue(0, timeSeriesCollection.getItemCount(0) / 2));
-
-            ChartUtils.saveChartAsJPEG(new File(startingPosition + "_time_series_chart.jpeg"), timeSeriesChart, 450, 400);
-            displaceMillisecond();
+            File chartJpegFile = new File(startingPosition + "_time_series_chart.jpg");
+            ChartUtils.saveChartAsJPEG(chartJpegFile, timeSeriesChart, 1024, 1024);
+            savedCharts.add(chartJpegFile);
+//            displaceMillisecond();
+            log.info("End ChartVideoObject.createAndSaveImage()");
         }
+        createFileForFfmpeg();
+    }
+
+//    public void createVideo(Path pathToJpegListFile, String pathToAudioListFile, int videoRate, LocalDateTime startObservDate, LocalDateTime endObservDate, int shiftInHours) {
+//        log.info("FfmpegVideoService.createVideo. pathToJpegListFile={}, pathToAudioListFile={}, videoRate={}", pathToJpegListFile, pathToAudioListFile, videoRate);
+//        String command = String.format(COMPILE_VIDEO_CMD_FFMPEG_WITHOUT_FULL_PATH, videoRate, pathToJpegListFile.toAbsolutePath(), pathToAudioListFile, calculateVideoFileName(startObservDate, endObservDate, shiftInHours));
+//                                                                            "ffmpeg -r %d -f concat -safe 0 -i %s -f concat -safe 0 -pix_fmt yuv420p -crf 23 -r 24 -shortest -y %s"
+//        log.info("cmd is {}", command);
+//        Process process = null;
+//        try {
+//            process = Runtime.getRuntime().exec(command);
+//            log.info(IOUtils.toString(process.getErrorStream(), Charset.defaultCharset()));
+//            while (process.isAlive()) {
+//                log.info("FfmpegVideoService.createVideo. Is process alive: {}", process.isAlive());
+//                Thread.sleep(1000);
+//            }
+//        } catch (IOException | InterruptedException e) {
+//            log.info("FfmpegVideoService.createVideo. Error during creation video pathToJpegListFile={}, pathToAudioListFile={}, error={}",
+//                    pathToJpegListFile, pathToAudioListFile, e.getStackTrace());
+//        }
+//    }
+
+//    public int calculateVideoRate(double audioDuration) {
+//        log.info("ChartVideoProcessor.calculateVideoRate. audioDuration={}, imagesCount={}", audioDuration, imagesCount);
+//        return (int) Math.round(savedCharts.size() / );
+//    }
+
+    public void createFileForFfmpeg() {
+        log.info("ChartVideoProcessor.createFileForFfmpeg(). savedCharts size is {}", savedCharts.size());
+        for (File chartImage : savedCharts) {
+            try (FileWriter writer = new FileWriter("charts.txt", true)) {
+                writer.write("file '" + chartImage.getAbsolutePath() + "'\n");
+            } catch (IOException exception) {
+                log.error("ChartVideoProcessor.createFileForFfmpeg(). ", exception);
+            }
+        }
+
     }
 
     private void displaceMillisecond() {
@@ -199,5 +259,11 @@ public class ChartVideoObject {
                 STR_TO_INT_FUNCT.apply(strArray[DAY_POSITION]),
                 STR_TO_INT_FUNCT.apply(strArray[MONTH_POSITION]),
                 2000 + STR_TO_INT_FUNCT.apply(strArray[YEAR_POSITION]));
+    }
+
+    public void setDuration(File sohoVideoFile) {
+        Media videoFile = new Media(sohoVideoFile.getAbsolutePath());
+        Duration duration = videoFile.getDuration();
+        this.duration = duration.toMillis();
     }
 }
